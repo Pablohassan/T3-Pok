@@ -1,73 +1,82 @@
-import { SignInButton, useUser} from "@clerk/nextjs";
+import { SignInButton, useUser } from "@clerk/nextjs";
 import { type NextPage } from "next";
 import Head from "next/head";
-
 
 import { api } from "~/utils/api";
 import type { RouterOutputs } from "~/utils/api";
 
-import dayjs from "dayjs"
-import relativeTime from "dayjs/plugin/relativeTime"
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
-dayjs.extend(relativeTime)
+import { LoadingPage} from "~/components/loading";
+dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
-  const {user} = useUser()
+  const { user } = useUser();
 
-  if(!user) return null
-  console.log(user)
+  if (!user) return null;
+  console.log(user);
 
   return (
-  
-  <div className="flex w-full gap-3">
-  <Image
-  src={user.profileImageUrl} 
-  alt="Profile image" 
-  className="h-16 w-16 rouded-full" 
-  height={56}
-  width={56}
-  />
-  <input placeholder="Type some emojis" className="bg-transparent"/>
-  </div>
-  )
-}
+    <div className="flex w-full gap-3">
+      <Image
+        src={user.profileImageUrl}
+        alt="Profile image"
+        className="rouded-full h-16 w-16"
+        height={56}
+        width={56}
+      />
+      <input placeholder="Type some emojis" className="bg-transparent" />
+    </div>
+  );
+};
 
-type PostWithUser = RouterOutputs["posts"]["getAll"][number]
+type PostWithUser = RouterOutputs["posts"]["getAll"][number];
 
-const PostView =(props: PostWithUser) => {
-
-  const {post, author} = props
-return(
-  <div key={post.id} className="flex border-b border-slate-400 p-4 gap-3">
-    <Image 
-    src={author.profilePictrue} 
-    className="h-14 rounded-full" 
-    alt={`@${author.username}'s`}
-    height={56}
-    width={56}
-    />
-    <div className="flex flex-col">
-      <div className="flex gap-1 text-slate-300">
-      <span>{`@${author?.username}`}</span>
-       <span>{` . ${dayjs(post.createdAt).fromNow()}`}</span>
-      
-      </div> 
-      <span>{post.content}</span>
+const PostView = (props: PostWithUser) => {
+  const { post, author } = props;
+  return (
+    <div key={post.id} className="flex gap-3 border-b border-slate-400 p-4">
+      <Image
+        src={author.profilePictrue}
+        className="h-14 rounded-full"
+        alt={`@${author.username}'s`}
+        height={56}
+        width={56}
+      />
+      <div className="flex flex-col">
+        <div className="flex gap-1 text-slate-300">
+          <span>{`@${author?.username}`}</span>
+          <span>{` . ${dayjs(post.createdAt).fromNow()}`}</span>
+        </div>
+        <span>{post.content}</span>
       </div>
-      </div>
-      
- 
-)
+    </div>
+  );
+};
+const Feed = () => {
+  const {data, isLoading: postLoading} = api.posts.getAll.useQuery()
+
+  if (postLoading) return <LoadingPage/>
+  if (!data) return <div>Somthing went wrong</div>
+
+  return( <div className="flex flex-col">
+  {[...data, ...data]?.map((fullPost) => (
+    <PostView {...fullPost} key={fullPost.post.id} />
+  ))}
+</div>)
 }
 
 const Home: NextPage = () => {
- 
-const user = useUser();
-const {data, isLoading} = api.posts.getAll.useQuery()
+  const { isLoaded: userLoaded, isSignedIn} = useUser();
 
-if (isLoading) return <div>Loading...</div>
+ api.posts.getAll.useQuery();
 
-if(!data) return <div>data missing</div>
+  if(!userLoaded) return <div/>
+
+  
+
+  
   return (
     <>
       <Head>
@@ -76,21 +85,17 @@ if(!data) return <div>data missing</div>
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex h-screen justify-center">
-    <div className="h-full w-full border-x border-slate-400 md:max-w-2xl "> 
-      <div className="`flex border-b border-slate-400 p-4">
-      {!user.isSignedIn && (
-      <div className="flex justify-center">
-        <SignInButton />
-        </div> 
-        )}
-      {!!user.isSignedIn && <CreatePostWizard /> }
-      </div>
-     <div className="flex flex-col">
-      {[...data, ...data]?.map((fullPost)=>(
-      <PostView {...fullPost} key={fullPost.post.id}/>
-      ))}
-     </div>
-     </div>
+        <div className="h-full w-full border-x border-slate-400 md:max-w-2xl ">
+          <div className="`flex border-b border-slate-400 p-4">
+            {!isSignedIn && (
+              <div className="flex justify-center">
+                <SignInButton />
+              </div>
+            )}
+            {isSignedIn && <CreatePostWizard />}
+          </div>
+          <Feed/>
+        </div>
       </main>
     </>
   );
